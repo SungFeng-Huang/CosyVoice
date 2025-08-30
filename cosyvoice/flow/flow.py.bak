@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-import os
-
 import random
 from typing import Dict, Optional
 import torch
@@ -187,13 +185,6 @@ class CausalMaskedDiffWithXvec(torch.nn.Module):
         self.only_mask_loss = only_mask_loss
         self.token_mel_ratio = token_mel_ratio
         self.pre_lookahead_len = pre_lookahead_len
-        # streaming progress print control
-        self._stream_step = 0
-        try:
-            self._print_every = int(os.environ.get("COSY_STREAM_PRINT_EVERY", "100"))
-        except Exception:
-            self._print_every = 100
-
 
     def forward(
             self,
@@ -252,17 +243,15 @@ class CausalMaskedDiffWithXvec(torch.nn.Module):
                   embedding,
                   streaming,
                   finalize):
+        import torch.distributed as dist
+        # if dist.get_rank() == 0:
+        #     print(f"token shape: {token.shape}, value: {token}\n")
+        #     print(f"prompt_token shape: {prompt_token.shape}, value: {prompt_token}\n")
+        #     print(f"prompt_feat shape: {prompt_feat.shape}, value: {prompt_feat}\n")
+        #     print(f"embedding shape: {embedding.shape}, value: {embedding}\n")
+        #     print(f"streaming: {streaming}\n")
+        #     print(f"finalize: {finalize}\n")
         assert token.shape[0] == 1
-        # periodic streaming progress log
-        if streaming:
-            step = getattr(self, "_stream_step", 0)
-            if step % max(getattr(self, "_print_every", 100), 1) == 0:
-                try:
-                    print(f"[cosy.flow] step={step} token_len={int(token_len.item()) if hasattr(token_len, 'item') else token_len} prompt_tok_len={int(prompt_token_len.item()) if hasattr(prompt_token_len, 'item') else prompt_token_len} finalize={finalize}")
-                except Exception:
-                    pass
-            self._stream_step = step + 1
-
         # xvec projection
         embedding = F.normalize(embedding, dim=1)
         embedding = self.spk_embed_affine_layer(embedding)

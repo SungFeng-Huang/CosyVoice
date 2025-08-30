@@ -131,6 +131,7 @@ class UpsampleConformerEncoder(torch.nn.Module):
         cnn_module_norm: str = "batch_norm",
         key_bias: bool = True,
         gradient_checkpointing: bool = False,
+        pre_lookahead_len: int = 3,
     ):
         """
         Args:
@@ -199,7 +200,7 @@ class UpsampleConformerEncoder(torch.nn.Module):
         # convolution module definition
         convolution_layer_args = (output_size, cnn_module_kernel, activation,
                                   cnn_module_norm, causal)
-        self.pre_lookahead_layer = PreLookaheadLayer(channels=512, pre_lookahead_len=3)
+        self.pre_lookahead_layer = PreLookaheadLayer(channels=512, pre_lookahead_len=pre_lookahead_len)
         self.encoders = torch.nn.ModuleList([
             ConformerEncoderLayer(
                 output_size,
