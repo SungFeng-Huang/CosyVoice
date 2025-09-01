@@ -275,8 +275,10 @@ class CausalMaskedDiffWithXvec(torch.nn.Module):
         token = self.input_embedding(token) * mask
 
         # text encode (handle short chunks for streaming)
-        if finalize is True or token.shape[1] <= self.pre_lookahead_len:
-            # Either final pass or too short to provide a full lookahead context:
+        # Only use explicit lookahead context when pre_lookahead_len > 0 and we have enough tokens.
+        use_ctx = (self.pre_lookahead_len > 0) and (not finalize) and (token.shape[1] > self.pre_lookahead_len)
+        if not use_ctx:
+            # Either final pass, or no lookahead requested, or too short to provide full lookahead:
             # fall back to no explicit context (PreLookaheadLayer will pad zeros).
             h, h_lengths = self.encoder(token, token_len, streaming=streaming)
         else:

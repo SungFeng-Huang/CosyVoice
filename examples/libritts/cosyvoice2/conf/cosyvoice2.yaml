@@ -10,11 +10,20 @@ llm_input_size: 896
 llm_output_size: 896
 spk_embed_dim: 192
 qwen_pretrain_path: ''
-token_frame_rate: 25
-token_mel_ratio: 2
+# zhy: Align to WhisperVQ tokenizer
+# zhy: WhisperVQ tokenizer at 12.5 Hz => 1 token = 4 mel frames (at 50 fps)
+token_frame_rate: 12.5
+token_mel_ratio: 4
+
+# 原始版本
+# token_frame_rate: 25
+# token_mel_ratio: 2
+
+# lookahead for streaming encoder
+pre_lookahead_len: 0
 
 # stream related params
-chunk_size: 25 # streaming inference chunk size, in token
+chunk_size: 2 # streaming inference chunk size, in token
 num_decoding_left_chunks: -1 # streaming inference flow decoder left chunk size, <0 means use all left chunks
 
 # model params
@@ -23,7 +32,9 @@ num_decoding_left_chunks: -1 # streaming inference flow decoder left chunk size,
 llm: !new:cosyvoice.llm.llm.Qwen2LM
     llm_input_size: !ref <llm_input_size>
     llm_output_size: !ref <llm_output_size>
-    speech_token_size: 6561
+    speech_token_size: 16384 # zhy: align to WhisperVQ
+    # 原始词表大小
+    # speech_token_size: 6561
     length_normalized_loss: True
     lsm_weight: 0
     mix_ratio: [5, 15]
@@ -40,11 +51,13 @@ flow: !new:cosyvoice.flow.flow.CausalMaskedDiffWithXvec
     output_size: 80
     spk_embed_dim: !ref <spk_embed_dim>
     output_type: 'mel'
-    vocab_size: 6561
+    vocab_size: 16384 # zhy: align to WhisperVQ
+    # 原始词表大小
+    # vocab_size: 6561
     input_frame_rate: !ref <token_frame_rate>
     only_mask_loss: True
     token_mel_ratio: !ref <token_mel_ratio>
-    pre_lookahead_len: 3
+    pre_lookahead_len: !ref <pre_lookahead_len>
     encoder: !new:cosyvoice.transformer.upsample_encoder.UpsampleConformerEncoder
         output_size: 512
         attention_heads: 8
@@ -61,6 +74,7 @@ flow: !new:cosyvoice.flow.flow.CausalMaskedDiffWithXvec
         use_cnn_module: False
         macaron_style: False
         static_chunk_size: !ref <chunk_size>
+        pre_lookahead_len: !ref <pre_lookahead_len>
     decoder: !new:cosyvoice.flow.flow_matching.CausalConditionalCFM
         in_channels: 240
         n_spks: 1
