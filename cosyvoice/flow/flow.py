@@ -251,7 +251,9 @@ class CausalMaskedDiffWithXvec(torch.nn.Module):
                   prompt_feat_len,
                   embedding,
                   streaming,
-                  finalize):
+                  finalize,
+                  use_text_context: bool = False,
+                  text_context: torch.Tensor = None):
         assert token.shape[0] == 1
         # periodic streaming progress log
         if streaming:
@@ -275,19 +277,24 @@ class CausalMaskedDiffWithXvec(torch.nn.Module):
         token = self.input_embedding(token) * mask
 
         # text encode (handle short chunks for streaming)
-        # Only use explicit lookahead context when pre_lookahead_len > 0 and we have enough tokens.
-        use_ctx = (self.pre_lookahead_len > 0) and (not finalize) and (token.shape[1] > self.pre_lookahead_len)
-        if not use_ctx:
-            # Either final pass, or no lookahead requested, or too short to provide full lookahead:
-            # fall back to no explicit context (PreLookaheadLayer will pad zeros).
-            h, h_lengths = self.encoder(token, token_len, streaming=streaming)
+        if use_text_context and text_context is not None and text_context.numel() > 0:
+            # Use provided text_context as explicit lookahead (length <= pre_lookahead_len),
+            # bypass semantic-token-based lookahead to avoid extra latency.
+            h, h_lengths = self.encoder(token, token_len, context=text_context, streaming=streaming)
         else:
-            # Split off fixed-length lookahead context and adjust lengths accordingly.
-            token_eff = token[:, :-self.pre_lookahead_len]
-            context = token[:, -self.pre_lookahead_len:]
-            # token_len is length after concat; adjust for the removed lookahead frames
-            token_len_eff = torch.clamp(token_len - self.pre_lookahead_len, min=0)
-            h, h_lengths = self.encoder(token_eff, token_len_eff, context=context, streaming=streaming)
+            # Only use explicit semantic lookahead when pre_lookahead_len > 0 and we have enough tokens.
+            use_ctx = (self.pre_lookahead_len > 0) and (not finalize) and (token.shape[1] > self.pre_lookahead_len)
+            if not use_ctx:
+                # Either final pass, or no lookahead requested, or too short to provide full lookahead:
+                # fall back to no explicit context (PreLookaheadLayer will pad zeros).
+                h, h_lengths = self.encoder(token, token_len, streaming=streaming)
+            else:
+                # Split off fixed-length lookahead context and adjust lengths accordingly.
+                token_eff = token[:, :-self.pre_lookahead_len]
+                context = token[:, -self.pre_lookahead_len:]
+                # token_len is length after concat; adjust for the removed lookahead frames
+                token_len_eff = torch.clamp(token_len - self.pre_lookahead_len, min=0)
+                h, h_lengths = self.encoder(token_eff, token_len_eff, context=context, streaming=streaming)
         mel_len1, mel_len2 = prompt_feat.shape[1], h.shape[1] - prompt_feat.shape[1]
         h = self.encoder_proj(h)
 

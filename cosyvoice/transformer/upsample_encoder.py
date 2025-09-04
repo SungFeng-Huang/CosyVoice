@@ -81,16 +81,24 @@ class PreLookaheadLayer(nn.Module):
     def forward(self, inputs: torch.Tensor, context: torch.Tensor = torch.zeros(0, 0, 0)) -> torch.Tensor:
         """
         inputs: (batch_size, seq_len, channels)
+        context: (batch_size, pre_lookahead_len, channels) or fewer/more frames; will be right-cropped/padded to pre_lookahead_len.
         """
         outputs = inputs.transpose(1, 2).contiguous()
         context = context.transpose(1, 2).contiguous()
         # look ahead
         if context.size(2) == 0:
+            # no explicit lookahead provided: pad zeros on the right
             outputs = F.pad(outputs, (0, self.pre_lookahead_len), mode='constant', value=0.0)
         else:
-            assert self.training is False, 'you have passed context, make sure that you are running inference mode'
-            assert context.size(2) == self.pre_lookahead_len
-            outputs = F.pad(torch.concat([outputs, context], dim=2), (0, self.pre_lookahead_len - context.size(2)), mode='constant', value=0.0)
+            # allow training mode as well; align context length to pre_lookahead_len
+            if context.size(2) > self.pre_lookahead_len:
+                ctx = context[:, :, -self.pre_lookahead_len:]
+            elif context.size(2) < self.pre_lookahead_len:
+                pad = (0, self.pre_lookahead_len - context.size(2))
+                ctx = F.pad(context, pad, mode='constant', value=0.0)
+            else:
+                ctx = context
+            outputs = F.pad(torch.concat([outputs, ctx], dim=2), (0, self.pre_lookahead_len - ctx.size(2)), mode='constant', value=0.0)
         outputs = F.leaky_relu(self.conv1(outputs))
         # outputs
         outputs = F.pad(outputs, (self.conv2.kernel_size[0] - 1, 0), mode='constant', value=0.0)
@@ -279,8 +287,8 @@ class UpsampleConformerEncoder(torch.nn.Module):
             xs = self.global_cmvn(xs)
         xs, pos_emb, masks = self.embed(xs, masks)
         if context.size(1) != 0:
-            assert self.training is False, 'you have passed context, make sure that you are running inference mode'
-            context_masks = torch.ones(1, 1, context.size(1)).to(masks)
+            # Allow both train/infer to pass explicit context; build mask and embed with correct offset
+            context_masks = torch.ones(context.size(0), 1, context.size(1), device=masks.device, dtype=masks.dtype)
             context, _, _ = self.embed(context, context_masks, offset=xs.size(1))
         mask_pad = masks  # (B, 1, T/subsample_rate)
         chunk_masks = add_optional_chunk_mask(xs, masks, False, False, 0, self.static_chunk_size if streaming is True else 0, -1)
