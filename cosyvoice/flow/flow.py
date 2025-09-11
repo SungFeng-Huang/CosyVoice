@@ -75,7 +75,8 @@ class MaskedDiffWithXvec(torch.nn.Module):
         embedding = self.spk_embed_affine_layer(embedding)
 
         # concat text and prompt_text
-        mask = (~make_pad_mask(token_len)).float().unsqueeze(-1).to(device)
+        # ensure mask length matches token.shape[1] even if external padding is used
+        mask = (~make_pad_mask(token_len, token.shape[1])).float().unsqueeze(-1).to(device)
         token = self.input_embedding(torch.clamp(token, min=0)) * mask
 
         # text encode
@@ -121,7 +122,8 @@ class MaskedDiffWithXvec(torch.nn.Module):
         # concat speech token and prompt speech token
         token_len1, token_len2 = prompt_token.shape[1], token.shape[1]
         token, token_len = torch.concat([prompt_token, token], dim=1), prompt_token_len + token_len
-        mask = (~make_pad_mask(token_len)).unsqueeze(-1).to(embedding)
+        # make mask with length equal to concatenated token length (supports external padding)
+        mask = (~make_pad_mask(token_len, token.shape[1])).unsqueeze(-1).to(embedding)
         token = self.input_embedding(torch.clamp(token, min=0)) * mask
 
         # text encode
@@ -214,7 +216,7 @@ class CausalMaskedDiffWithXvec(torch.nn.Module):
         embedding = self.spk_embed_affine_layer(embedding)
 
         # concat text and prompt_text
-        mask = (~make_pad_mask(token_len)).float().unsqueeze(-1).to(device)
+        mask = (~make_pad_mask(token_len, token.shape[1])).float().unsqueeze(-1).to(device)
         token = self.input_embedding(torch.clamp(token, min=0)) * mask
 
         # text encode
@@ -271,7 +273,8 @@ class CausalMaskedDiffWithXvec(torch.nn.Module):
 
         # concat text and prompt_text
         token, token_len = torch.concat([prompt_token, token], dim=1), prompt_token_len + token_len
-        mask = (~make_pad_mask(token_len)).unsqueeze(-1).to(embedding)
+        # Build mask with full concatenated length to support externally padded tokens
+        mask = (~make_pad_mask(token_len, token.shape[1])).unsqueeze(-1).to(embedding)
         # Clamp both lower and upper bounds to avoid out-of-range embedding indices
         token = torch.clamp(token, min=0, max=self.vocab_size - 1)
         token = self.input_embedding(token) * mask
