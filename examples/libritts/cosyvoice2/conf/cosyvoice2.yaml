@@ -20,7 +20,7 @@ token_mel_ratio: 4
 # token_mel_ratio: 2
 
 # lookahead for streaming encoder
-pre_lookahead_len: 3
+pre_lookahead_len: 0
 
 # stream related params
 chunk_size: 2 # streaming inference chunk size, in token
@@ -30,6 +30,7 @@ num_decoding_left_chunks: -1 # streaming inference flow decoder left chunk size,
 
 # training augmentation
 stream_train_first_block_random: false  # if true, training uses a random first chunk length in [1, chunk_size]
+
 
 # cross-text attention (streaming only)
 use_cross_text_attn: false          # if true, use cross-text attention with full prefix [0:t_end)
