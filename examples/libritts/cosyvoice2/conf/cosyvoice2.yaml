@@ -20,7 +20,7 @@ token_mel_ratio: 4
 # token_mel_ratio: 2
 
 # lookahead for streaming
-pre_lookahead_len: 8 # 当我们使用text cross attention时，attention(+FFN)输出会被投影到这个pre_lookahead的shape上然后送入flow，相当于替代了原先的pre_lookahead的因果卷积
+pre_lookahead_len: 8 # 当我们使用text cross attention时，attention(+FFN)输出会被投影到这个pre_lookahead的shape上然后送入flow，相当于替代了原先的pre_lookahead的因果卷积，如果步使用cross-text attn，那这里就是正常的因果卷积
 
 # 滑动窗口的配置，窗口大小，每次滑动步长
 chunk_size: 10 # streaming inference chunk size, in token
