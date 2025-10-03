@@ -20,23 +20,35 @@ token_mel_ratio: 4
 # token_mel_ratio: 2
 
 # lookahead for streaming
-pre_lookahead_len: 0 # 当我们使用text cross attention时，attention(+FFN)输出会被投影到这个pre_lookahead的shape上然后送入flow，相当于替代了原先的pre_lookahead的因果卷积，如果步使用cross-text attn，那这里就是正常的因果卷积
+pre_lookahead_len: 8 # 当我们使用text cross attention时，attention(+FFN)输出会被投影到这个pre_lookahead的shape上然后送入flow，相当于替代了原先的pre_lookahead的因果卷积，如果步使用cross-text attn，那这里就是正常的因果卷积
 
 # 滑动窗口的配置，窗口大小，每次滑动步长
-chunk_size: 4 # streaming inference chunk size, in token
+chunk_size: 24 # streaming inference chunk size, in token
 stream_stride: 4 # sliding window stride (in tokens) for streaming; must be <= chunk_size
 num_decoding_left_chunks: -1 # streaming inference flow decoder left chunk size, <0 means use all left chunks
 
 # training augmentation
-stream_train_first_block_random: false  # if true, training uses a random first chunk length in [1, chunk_size]
+stream_train_first_block_random: true  # if true, training uses a random first chunk length in [1, chunk_size]
+# streaming window padding behavior (optional)
+stream_fixed_window_pad: false     # if true, pad last window to fixed chunk_size during streaming
 
 # cross-text attention (streaming模式下有效)
-use_cross_text_attn: false          # if true, use cross-text attention with full prefix [0:t_end)
+use_cross_text_attn: true          # if true, use cross-text attention with full prefix [0:t_end)
 cross_text_attn_heads: 4           # number of attention heads
 cross_text_attn_dropout: 0.0       # dropout for cross attention
-cross_text_q_pool: 'last'          # how to pool current chunk tokens for query: 'mean' or 'last'
+# NOTE: Q pooling is deprecated. We now aggregate full-Q via learned context queries to L_ctx (no mean/last pooling)
 cross_text_ffn_hidden: 4096       # hidden dim of FFN after cross-text attention
 cross_text_ffn_dropout: 0.0       # dropout in FFN after cross-text attention
+
+# speech/text side lightweight blocks (optional; defaults are sensible)
+speech_sa_heads: 4                 # heads for speech-side self-attn over Q histories
+speech_sa_dropout: 0.0
+speech_ffn_hidden: 4096
+speech_ffn_dropout: 0.0
+text_sa_heads: 4                   # heads for text-side causal self-attn refining KV
+text_sa_dropout: 0.0
+text_ffn_hidden: 4096
+text_ffn_dropout: 0.0
 
 # model params
 # for all class/function included in this repo, we use !<name> or !<new> for intialization, so that user may find all corresponding class/function according to one single yaml.
