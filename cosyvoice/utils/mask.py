@@ -155,6 +155,8 @@ def subsequent_chunk_mask(
     pos_idx = torch.arange(size, device=device)
     block_value = (torch.div(pos_idx, chunk_size, rounding_mode='trunc') + 1) * chunk_size
     ret = pos_idx.unsqueeze(0) < block_value.unsqueeze(1)
+    if num_left_chunks >= 0:
+        ret = ret & ((pos_idx + (1 + num_left_chunks) * chunk_size) >= block_value)
     return ret
 
 

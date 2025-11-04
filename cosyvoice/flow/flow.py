@@ -262,7 +262,7 @@ class CausalMaskedDiffWithXvec(torch.nn.Module):
             step = getattr(self, "_stream_step", 0)
             if step % max(getattr(self, "_print_every", 100), 1) == 0:
                 try:
-                    print(f"[cosy.flow] step={step} token_len={int(token_len.item()) if hasattr(token_len, 'item') else token_len} prompt_tok_len={int(prompt_token_len.item()) if hasattr(prompt_token_len, 'item') else prompt_token_len} finalize={finalize}")
+                    logging.info(f"[cosy.flow] step={step} token_len={int(token_len.item()) if hasattr(token_len, 'item') else token_len} prompt_tok_len={int(prompt_token_len.item()) if hasattr(prompt_token_len, 'item') else prompt_token_len} finalize={finalize}")
                 except Exception:
                     pass
             self._stream_step = step + 1

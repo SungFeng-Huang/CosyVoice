@@ -304,7 +304,7 @@ class CausalConditionalDecoder(ConditionalDecoder):
         num_heads=4,
         act_fn="snake",
         static_chunk_size=50,
-        num_decoding_left_chunks=2,
+        num_decoding_left_chunks=-1,
     ):
         """
         This decoder requires an input with the same shape of the target. So, if your text content
@@ -437,7 +437,7 @@ class CausalConditionalDecoder(ConditionalDecoder):
             x = resnet(x, mask_down, t)
             x = rearrange(x, "b c t -> b t c").contiguous()
             if streaming is True:
-                attn_mask = add_optional_chunk_mask(x, mask_down.bool(), False, False, 0, self.static_chunk_size, -1)
+                attn_mask = add_optional_chunk_mask(x, mask_down.bool(), False, False, 0, self.static_chunk_size, self.num_decoding_left_chunks)
             else:
                 attn_mask = add_optional_chunk_mask(x, mask_down.bool(), False, False, 0, 0, -1).repeat(1, x.size(1), 1)
             attn_mask = mask_to_bias(attn_mask, x.dtype)
@@ -458,7 +458,7 @@ class CausalConditionalDecoder(ConditionalDecoder):
             x = resnet(x, mask_mid, t)
             x = rearrange(x, "b c t -> b t c").contiguous()
             if streaming is True:
-                attn_mask = add_optional_chunk_mask(x, mask_mid.bool(), False, False, 0, self.static_chunk_size, -1)
+                attn_mask = add_optional_chunk_mask(x, mask_mid.bool(), False, False, 0, self.static_chunk_size, self.num_decoding_left_chunks)
             else:
                 attn_mask = add_optional_chunk_mask(x, mask_mid.bool(), False, False, 0, 0, -1).repeat(1, x.size(1), 1)
             attn_mask = mask_to_bias(attn_mask, x.dtype)
@@ -477,7 +477,7 @@ class CausalConditionalDecoder(ConditionalDecoder):
             x = resnet(x, mask_up, t)
             x = rearrange(x, "b c t -> b t c").contiguous()
             if streaming is True:
-                attn_mask = add_optional_chunk_mask(x, mask_up.bool(), False, False, 0, self.static_chunk_size, -1)
+                attn_mask = add_optional_chunk_mask(x, mask_up.bool(), False, False, 0, self.static_chunk_size, self.num_decoding_left_chunks)
             else:
                 attn_mask = add_optional_chunk_mask(x, mask_up.bool(), False, False, 0, 0, -1).repeat(1, x.size(1), 1)
             attn_mask = mask_to_bias(attn_mask, x.dtype)
